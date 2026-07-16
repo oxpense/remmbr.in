@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const https = require('https');
 const db = require('../db');
 const { auth } = require('../middleware/auth');
 
@@ -29,6 +30,47 @@ const createTransporter = () => {
     });
   }
   return null;
+};
+
+// HTTP Request helper using standard node 'https' module to prevent outbound port blocks on Render
+const postRequest = (url, headers, body) => {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const options = {
+      method: 'POST',
+      hostname: parsedUrl.hostname,
+      path: parsedUrl.pathname + parsedUrl.search,
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers
+      },
+      timeout: 10000
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try {
+            resolve(JSON.parse(data || '{}'));
+          } catch (_) {
+            resolve(data);
+          }
+        } else {
+          reject(new Error(`API responded with status ${res.statusCode}: ${data}`));
+        }
+      });
+    });
+
+    req.on('error', (err) => reject(err));
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('API request timed out'));
+    });
+    req.write(JSON.stringify(body));
+    req.end();
+  });
 };
 
 // POST /api/auth/send-otp - Request an OTP for registration or password reset
@@ -67,37 +109,78 @@ router.post('/send-otp', async (req, res) => {
       [email.toLowerCase(), otpCode, expiresAt]
     );
 
-    // Try sending email
-    const transporter = createTransporter();
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
+        <h2 style="color: #6366f1; text-align: center;">Remmbr Verification</h2>
+        <p>Hello,</p>
+        <p>You requested a code to verify your action on Remmbr. Use the 6-digit code below to complete the action:</p>
+        <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; border-radius: 8px; margin: 20px 0; color: #1f2937;">
+          ${otpCode}
+        </div>
+        <p style="color: #6b7280; font-size: 12px; text-align: center;">This code will expire in 5 minutes. If you did not request this, you can ignore this email.</p>
+      </div>
+    `;
+
     let emailSent = false;
     let errorMsg = null;
 
-    if (transporter) {
+    // Mail dispatch driver selection (Resend HTTPS -> Brevo HTTPS -> SMTP standard)
+    if (process.env.RESEND_API_KEY) {
       try {
-        await transporter.sendMail({
-          from: `"Remmbr Team" <${process.env.SMTP_USER}>`,
-          to: email,
-          subject: 'Your Remmbr Verification Code',
-          text: `Your verification code is ${otpCode}. It will expire in 5 minutes.`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
-              <h2 style="color: #6366f1; text-align: center;">Remmbr Verification</h2>
-              <p>Hello,</p>
-              <p>You requested a code to verify your action on Remmbr. Use the 6-digit code below to complete the action:</p>
-              <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; border-radius: 8px; margin: 20px 0; color: #1f2937;">
-                ${otpCode}
-              </div>
-              <p style="color: #6b7280; font-size: 12px; text-align: center;">This code will expire in 5 minutes. If you did not request this, you can ignore this email.</p>
-            </div>
-          `
-        });
+        const fromEmail = process.env.RESEND_FROM || 'onboarding@resend.dev';
+        await postRequest(
+          'https://api.resend.com/emails',
+          { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+          {
+            from: `Remmbr Team <${fromEmail}>`,
+            to: [email],
+            subject: 'Your Remmbr Verification Code',
+            html: htmlContent
+          }
+        );
         emailSent = true;
       } catch (err) {
-        console.error('SMTP sending failed:', err);
-        errorMsg = err.message || err.toString();
+        console.error('Resend API sending failed:', err);
+        errorMsg = `Resend API failed: ${err.message}`;
+      }
+    } else if (process.env.BREVO_API_KEY) {
+      try {
+        const fromEmail = process.env.BREVO_FROM || 'otp@remmbr.xyz';
+        await postRequest(
+          'https://api.brevo.com/v3/smtp/email',
+          { 'api-key': process.env.BREVO_API_KEY },
+          {
+            sender: { name: 'Remmbr Team', email: fromEmail },
+            to: [{ email }],
+            subject: 'Your Remmbr Verification Code',
+            htmlContent: htmlContent
+          }
+        );
+        emailSent = true;
+      } catch (err) {
+        console.error('Brevo API sending failed:', err);
+        errorMsg = `Brevo API failed: ${err.message}`;
       }
     } else {
-      errorMsg = 'SMTP environment variables are not set or loaded';
+      // SMTP client fallback
+      const transporter = createTransporter();
+      if (transporter) {
+        try {
+          await transporter.sendMail({
+            from: `"Remmbr Team" <${process.env.SMTP_USER}>`,
+            to: email,
+            subject: 'Your Remmbr Verification Code',
+            text: `Your verification code is ${otpCode}. It will expire in 5 minutes.`,
+            html: htmlContent
+          });
+          emailSent = true;
+        } catch (err) {
+          console.error('SMTP sending failed:', err);
+          errorMsg = `SMTP failed: ${err.message}`;
+        }
+      } else {
+        errorMsg = 'No email delivery credentials (RESEND_API_KEY, BREVO_API_KEY, or SMTP keys) configured on Render';
+      }
     }
 
     console.log(`[Remmbr OTP log] Code for ${email} is: ${otpCode}`);
