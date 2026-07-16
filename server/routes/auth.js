@@ -28,7 +28,7 @@ const createTransporter = () => {
   return null;
 };
 
-// POST /api/auth/send-otp - Request an OTP
+// POST /api/auth/send-otp - Request an OTP for registration or password reset
 router.post('/send-otp', async (req, res) => {
   try {
     const { email, action } = req.body;
@@ -41,7 +41,7 @@ router.post('/send-otp', async (req, res) => {
       return res.status(400).json({ error: 'Only Gmail accounts are allowed' });
     }
 
-    // Check constraints depending on register/login action
+    // Check constraints depending on action
     const existingResult = await db.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
     const userExists = existingResult.rows.length > 0;
 
@@ -49,8 +49,8 @@ router.post('/send-otp', async (req, res) => {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    if (action === 'login' && !userExists) {
-      return res.status(404).json({ error: 'Email is not registered yet' });
+    if (action === 'forgot_password' && !userExists) {
+      return res.status(404).json({ error: 'This email is not registered' });
     }
 
     // Generate 6-digit OTP
@@ -80,7 +80,7 @@ router.post('/send-otp', async (req, res) => {
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
               <h2 style="color: #6366f1; text-align: center;">Remmbr Verification</h2>
               <p>Hello,</p>
-              <p>You requested a code to verify your account on Remmbr. Use the 6-digit code below to complete the action:</p>
+              <p>You requested a code to verify your action on Remmbr. Use the 6-digit code below to complete the action:</p>
               <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; border-radius: 8px; margin: 20px 0; color: #1f2937;">
                 ${otpCode}
               </div>
@@ -97,11 +97,11 @@ router.post('/send-otp', async (req, res) => {
 
     console.log(`[Remmbr OTP log] Code for ${email} is: ${otpCode}`);
 
-    // Return the response. If SMTP is not set up, return the OTP in the response for demo/development convenience.
+    // Return response. If SMTP not set, return OTP in response for testing ease.
     res.json({
       success: true,
       message: emailSent ? 'OTP sent to your Gmail account!' : 'OTP generated.',
-      demoOtp: !emailSent ? otpCode : null, // expose only if SMTP is not configured
+      demoOtp: !emailSent ? otpCode : null,
       error: errorMsg
     });
   } catch (err) {
@@ -110,7 +110,7 @@ router.post('/send-otp', async (req, res) => {
   }
 });
 
-// POST /api/auth/register-verify - Verify OTP and complete registration
+// POST /api/auth/register-verify - Verify OTP and complete registration (Gmail + OTP required)
 router.post('/register-verify', async (req, res) => {
   try {
     const { name, email, password, otp } = req.body;
@@ -168,22 +168,22 @@ router.post('/register-verify', async (req, res) => {
   }
 });
 
-// POST /api/auth/login-verify - Verify credentials and verify OTP
-router.post('/login-verify', async (req, res) => {
+// POST /api/auth/login - Frictionless login with Email and Password only (NO OTP REQUIRED)
+router.post('/login', async (req, res) => {
   try {
-    const { email, password, otp } = req.body;
+    const { email, password } = req.body;
 
-    if (!email || !password || !otp) {
-      return res.status(400).json({ error: 'Email, password, and otp are required' });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    // Check if email is Gmail-compliant (or demo)
     if (!isGmail(email)) {
       return res.status(400).json({ error: 'Only Gmail accounts are allowed' });
     }
 
-    // Verify Password first
-    const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
-    const user = userResult.rows[0];
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+    const user = result.rows[0];
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -192,19 +192,6 @@ router.post('/login-verify', async (req, res) => {
     if (!valid) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
-
-    // Verify OTP (allow bypassing for the demo user only if configured, but let's require it and print code)
-    const otpResult = await db.query(
-      'SELECT * FROM otps WHERE email = $1 AND otp_code = $2 AND expires_at > NOW()',
-      [email.toLowerCase(), otp]
-    );
-
-    if (otpResult.rows.length === 0) {
-      return res.status(400).json({ error: 'Invalid or expired OTP code' });
-    }
-
-    // Delete OTP
-    await db.query('DELETE FROM otps WHERE email = $1', [email.toLowerCase()]);
 
     const token = jwt.sign(
       { id: user.id },
@@ -217,8 +204,54 @@ router.post('/login-verify', async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email }
     });
   } catch (err) {
-    console.error('Verify login error:', err);
-    res.status(500).json({ error: 'Server error verifying login' });
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Server error during login' });
+  }
+});
+
+// POST /api/auth/reset-password - Verify reset OTP and update password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ error: 'Email, OTP code, and new password are required' });
+    }
+
+    if (!isGmail(email)) {
+      return res.status(400).json({ error: 'Only Gmail accounts are allowed' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Validate OTP
+    const otpResult = await db.query(
+      'SELECT * FROM otps WHERE email = $1 AND otp_code = $2 AND expires_at > NOW()',
+      [email.toLowerCase(), otp]
+    );
+
+    if (otpResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired OTP code' });
+    }
+
+    // Delete OTP
+    await db.query('DELETE FROM otps WHERE email = $1', [email.toLowerCase()]);
+
+    // Update user password
+    const salt = bcrypt.genSaltSync(12);
+    const passwordHash = bcrypt.hashSync(newPassword, salt);
+
+    await db.query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2',
+      [passwordHash, email.toLowerCase()]
+    );
+
+    res.json({ success: true, message: 'Password reset successfully!' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ error: 'Server error resetting password' });
   }
 });
 

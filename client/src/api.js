@@ -38,10 +38,15 @@ export const auth = {
       method: 'POST',
       body: JSON.stringify({ name, email, password, otp }),
     }),
-  loginVerify: (email, password, otp) =>
-    request('/auth/login-verify', {
+  login: (email, password) =>
+    request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password, otp }),
+      body: JSON.stringify({ email, password }),
+    }),
+  resetPassword: (email, otp, newPassword) =>
+    request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp, newPassword }),
     }),
   me: () => request('/auth/me'),
   updateSettings: (settings) =>

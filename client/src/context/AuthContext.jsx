@@ -31,8 +31,8 @@ export function AuthProvider({ children }) {
     return await authApi.sendOtp(email, action);
   };
 
-  const login = async (email, password, otp) => {
-    const response = await authApi.loginVerify(email, password, otp);
+  const login = async (email, password) => {
+    const response = await authApi.login(email, password);
     localStorage.setItem('token', response.token);
     setUser(response.user);
     return response.user;
@@ -45,6 +45,10 @@ export function AuthProvider({ children }) {
     return response.user;
   };
 
+  const resetPassword = async (email, otp, newPassword) => {
+    return await authApi.resetPassword(email, otp, newPassword);
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
@@ -55,7 +59,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser, loadUser, sendOtp }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser, loadUser, sendOtp, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );
