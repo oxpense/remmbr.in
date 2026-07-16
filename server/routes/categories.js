@@ -5,10 +5,10 @@ const { auth } = require('../middleware/auth');
 const router = express.Router();
 
 // GET /api/categories - Get all categories
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const categories = db.prepare('SELECT * FROM categories ORDER BY name ASC').all();
-    res.json({ categories });
+    const result = await db.query('SELECT * FROM categories ORDER BY name ASC');
+    res.json({ categories: result.rows });
   } catch (err) {
     console.error('Get categories error:', err);
     res.status(500).json({ error: 'Server error fetching categories' });
@@ -16,15 +16,22 @@ router.get('/', (req, res) => {
 });
 
 // For admin/stats - get categories with item counts
-router.get('/with-counts', auth, (req, res) => {
+router.get('/with-counts', auth, async (req, res) => {
   try {
-    const categories = db.prepare(`
+    const result = await db.query(`
       SELECT c.*,
-        (SELECT COUNT(*) FROM items WHERE category = c.name AND user_id = ? AND status = 'active') as active_count,
-        (SELECT COUNT(*) FROM items WHERE category = c.name AND user_id = ?) as total_count
+        (SELECT COUNT(*) FROM items WHERE category = c.name AND user_id = $1 AND status = 'active') as active_count,
+        (SELECT COUNT(*) FROM items WHERE category = c.name AND user_id = $2) as total_count
       FROM categories c
       ORDER BY active_count DESC, c.name ASC
-    `).all(req.user.id, req.user.id);
+    `, [req.user.id, req.user.id]);
+
+    // pg returns count as string (bigint), convert to numbers
+    const categories = result.rows.map(row => ({
+      ...row,
+      active_count: parseInt(row.active_count, 10),
+      total_count: parseInt(row.total_count, 10)
+    }));
 
     res.json({ categories });
   } catch (err) {

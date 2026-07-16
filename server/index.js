@@ -5,7 +5,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-const db = require('./db');
+const { initDatabase } = require('./db');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -56,8 +56,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`\n  🚀 Renewal Tracker Server running on http://localhost:${PORT}`);
-  console.log(`  📦 API: http://localhost:${PORT}/api/`);
-  console.log(`  🔑 Demo login: demo@example.com / demo123456\n`);
-});
+// Initialize database and start listening
+initDatabase()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`\n  🚀 Remmbr Server running on http://localhost:${PORT}`);
+      console.log(`  📦 API: http://localhost:${PORT}/api/`);
+      console.log(`  🔑 Demo login: demo@example.com / demo123456\n`);
+    });
+  })
+  .catch(err => {
+    console.error('Database initialization failed! Server shutting down.', err);
+    process.exit(1);
+  });

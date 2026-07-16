@@ -7,7 +7,7 @@ const { auth } = require('../middleware/auth');
 const router = express.Router();
 
 // POST /api/auth/register
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
@@ -19,25 +19,29 @@ router.post('/register', (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
-    if (existing) {
+    const existingResult = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existingResult.rows.length > 0) {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
     const salt = bcrypt.genSaltSync(12);
     const passwordHash = bcrypt.hashSync(password, salt);
 
-    const result = db.prepare('INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)').run(name, email, passwordHash);
+    const result = await db.query(
+      'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id',
+      [name, email, passwordHash]
+    );
+    const userId = result.rows[0].id;
 
     const token = jwt.sign(
-      { id: result.lastInsertRowid },
+      { id: userId },
       process.env.JWT_SECRET || 'fallback-secret',
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
     res.status(201).json({
       token,
-      user: { id: result.lastInsertRowid, name, email }
+      user: { id: userId, name, email }
     });
   } catch (err) {
     console.error('Register error:', err);
@@ -46,7 +50,7 @@ router.post('/register', (req, res) => {
 });
 
 // POST /api/auth/login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -54,7 +58,8 @@ router.post('/login', (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -86,7 +91,7 @@ router.get('/me', auth, (req, res) => {
 });
 
 // PUT /api/auth/settings
-router.put('/settings', auth, (req, res) => {
+router.put('/settings', auth, async (req, res) => {
   try {
     const { phone, notification_enabled, reminder_days, name } = req.body;
     const updates = {};
@@ -99,14 +104,21 @@ router.put('/settings', auth, (req, res) => {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    const setClauses = Object.keys(updates).map((k, idx) => `${k} = $${idx + 1}`).join(', ');
     const values = Object.values(updates);
     values.push(req.user.id);
 
-    db.prepare(`UPDATE users SET ${setClauses}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
+    await db.query(
+      `UPDATE users SET ${setClauses}, updated_at = CURRENT_TIMESTAMP WHERE id = $${values.length}`,
+      values
+    );
 
-    const user = db.prepare('SELECT id, name, email, phone, notification_enabled, reminder_days FROM users WHERE id = ?').get(req.user.id);
-    res.json({ user });
+    const userResult = await db.query(
+      'SELECT id, name, email, phone, notification_enabled, reminder_days FROM users WHERE id = $1',
+      [req.user.id]
+    );
+
+    res.json({ user: userResult.rows[0] });
   } catch (err) {
     console.error('Settings error:', err);
     res.status(500).json({ error: 'Server error updating settings' });

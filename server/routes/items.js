@@ -5,25 +5,30 @@ const { auth } = require('../middleware/auth');
 const router = express.Router();
 
 // GET /api/items - Get all items for the user
-router.get('/', auth, (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
     const { category, status, search, sort } = req.query;
-    let query = 'SELECT * FROM items WHERE user_id = ?';
+    let query = 'SELECT * FROM items WHERE user_id = $1';
     const params = [req.user.id];
 
+    let paramIndex = 2;
+
     if (category && category !== 'all') {
-      query += ' AND category = ?';
+      query += ` AND category = $${paramIndex}`;
       params.push(category);
+      paramIndex++;
     }
 
     if (status && status !== 'all') {
-      query += ' AND status = ?';
+      query += ` AND status = $${paramIndex}`;
       params.push(status);
+      paramIndex++;
     }
 
     if (search) {
-      query += ' AND (title LIKE ? OR description LIKE ? OR reference_number LIKE ?)';
+      query += ` AND (title ILIKE $${paramIndex} OR description ILIKE $${paramIndex + 1} OR reference_number ILIKE $${paramIndex + 2})`;
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      paramIndex += 3;
     }
 
     const sortMap = {
@@ -39,12 +44,14 @@ router.get('/', auth, (req, res) => {
     if (limit) {
       const parsedLimit = parseInt(limit, 10);
       if (!isNaN(parsedLimit) && parsedLimit > 0) {
-        query += ' LIMIT ?';
+        query += ` LIMIT $${paramIndex}`;
         params.push(parsedLimit);
+        paramIndex++;
       }
     }
 
-    const items = db.prepare(query).all(...params);
+    const result = await db.query(query, params);
+    const items = result.rows;
 
     // Calculate remaining days for each item
     const now = new Date();
@@ -67,21 +74,33 @@ router.get('/', auth, (req, res) => {
 });
 
 // GET /api/items/upcoming - Get items expiring soon
-router.get('/upcoming', auth, (req, res) => {
+router.get('/upcoming', auth, async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 30;
     const now = new Date().toISOString().split('T')[0];
     const future = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    const items = db.prepare(`
+    const result = await db.query(`
       SELECT * FROM items
-      WHERE user_id = ?
+      WHERE user_id = $1
         AND status = 'active'
-        AND expiry_date BETWEEN ? AND ?
+        AND expiry_date BETWEEN $2 AND $3
       ORDER BY expiry_date ASC
-    `).all(req.user.id, now, future);
+    `, [req.user.id, now, future]);
 
-    res.json({ items });
+    const nowTime = new Date();
+    const itemsWithRemaining = result.rows.map(item => {
+      const expiry = new Date(item.expiry_date);
+      const remaining = Math.ceil((expiry - nowTime) / (1000 * 60 * 60 * 24));
+      return {
+        ...item,
+        days_remaining: remaining,
+        is_expired: remaining < 0,
+        is_expiring_soon: remaining >= 0 && remaining <= item.remind_before_days
+      };
+    });
+
+    res.json({ items: itemsWithRemaining });
   } catch (err) {
     console.error('Upcoming items error:', err);
     res.status(500).json({ error: 'Server error fetching upcoming items' });
@@ -89,18 +108,18 @@ router.get('/upcoming', auth, (req, res) => {
 });
 
 // GET /api/items/expired - Get expired items
-router.get('/expired', auth, (req, res) => {
+router.get('/expired', auth, async (req, res) => {
   try {
     const now = new Date().toISOString().split('T')[0];
-    const items = db.prepare(`
+    const result = await db.query(`
       SELECT * FROM items
-      WHERE user_id = ?
+      WHERE user_id = $1
         AND status = 'active'
-        AND expiry_date < ?
+        AND expiry_date < $2
       ORDER BY expiry_date ASC
-    `).all(req.user.id, now);
+    `, [req.user.id, now]);
 
-    res.json({ items });
+    res.json({ items: result.rows });
   } catch (err) {
     console.error('Expired items error:', err);
     res.status(500).json({ error: 'Server error fetching expired items' });
@@ -108,39 +127,48 @@ router.get('/expired', auth, (req, res) => {
 });
 
 // GET /api/items/stats - Get statistics
-router.get('/stats', auth, (req, res) => {
+router.get('/stats', auth, async (req, res) => {
   try {
     const now = new Date().toISOString().split('T')[0];
     const thirtyDays = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const sevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     // Consolidated single query for main metrics
-    const baseStats = db.prepare(`
+    const statsResult = await db.query(`
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
-        SUM(CASE WHEN status = 'active' AND expiry_date < ? THEN 1 ELSE 0 END) as expired,
+        SUM(CASE WHEN status = 'active' AND expiry_date < $1 THEN 1 ELSE 0 END) as expired,
         SUM(CASE WHEN status = 'archived' THEN 1 ELSE 0 END) as archived,
-        SUM(CASE WHEN status = 'active' AND expiry_date BETWEEN ? AND ? THEN 1 ELSE 0 END) as upcoming,
-        SUM(CASE WHEN status = 'active' AND expiry_date BETWEEN ? AND ? THEN 1 ELSE 0 END) as critical,
+        SUM(CASE WHEN status = 'active' AND expiry_date BETWEEN $2 AND $3 THEN 1 ELSE 0 END) as upcoming,
+        SUM(CASE WHEN status = 'active' AND expiry_date BETWEEN $4 AND $5 THEN 1 ELSE 0 END) as critical,
         COALESCE(SUM(CASE WHEN status = 'active' THEN cost ELSE 0 END), 0) as yearlyCost
       FROM items 
-      WHERE user_id = ?
-    `).get(now, now, thirtyDays, now, sevenDays, req.user.id);
+      WHERE user_id = $6
+    `, [now, now, thirtyDays, now, sevenDays, req.user.id]);
+
+    const baseStats = statsResult.rows[0];
 
     // Items by category
-    const byCategory = db.prepare(`
+    const categoryResult = await db.query(`
       SELECT category, COUNT(*) as count FROM items
-      WHERE user_id = ? AND status = 'active'
+      WHERE user_id = $1 AND status = 'active'
       GROUP BY category ORDER BY count DESC
-    `).all(req.user.id);
+    `, [req.user.id]);
+
+    const byCategory = categoryResult.rows.map(row => ({
+      ...row,
+      count: parseInt(row.count, 10)
+    }));
 
     // Single query to fetch active items expiring within the next 12 months for JS grouping
     const twelveMonthsLater = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const itemsForMonths = db.prepare(`
+    const itemsResult = await db.query(`
       SELECT expiry_date FROM items 
-      WHERE user_id = ? AND status = 'active' AND expiry_date BETWEEN ? AND ?
-    `).all(req.user.id, now, twelveMonthsLater);
+      WHERE user_id = $1 AND status = 'active' AND expiry_date BETWEEN $2 AND $3
+    `, [req.user.id, now, twelveMonthsLater]);
+
+    const itemsForMonths = itemsResult.rows;
 
     // Perform month grouping in JS loop (extremely fast compared to 12 SQL statement preparing & execution)
     const monthly = [];
@@ -163,15 +191,15 @@ router.get('/stats', auth, (req, res) => {
 
     res.json({
       stats: {
-        total: baseStats.total || 0,
-        active: baseStats.active || 0,
-        expired: baseStats.expired || 0,
-        archived: baseStats.archived || 0,
-        upcoming: baseStats.upcoming || 0,
-        critical: baseStats.critical || 0,
+        total: parseInt(baseStats.total, 10) || 0,
+        active: parseInt(baseStats.active, 10) || 0,
+        expired: parseInt(baseStats.expired, 10) || 0,
+        archived: parseInt(baseStats.archived, 10) || 0,
+        upcoming: parseInt(baseStats.upcoming, 10) || 0,
+        critical: parseInt(baseStats.critical, 10) || 0,
         byCategory,
         monthly,
-        yearlyCost: baseStats.yearlyCost || 0
+        yearlyCost: parseFloat(baseStats.yearlycost) || 0
       }
     });
   } catch (err) {
@@ -181,7 +209,7 @@ router.get('/stats', auth, (req, res) => {
 });
 
 // POST /api/items - Create a new item
-router.post('/', auth, (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
     const { title, category, description, reference_number, issuing_authority, issue_date, expiry_date, remind_before_days, cost, notes } = req.body;
 
@@ -189,17 +217,17 @@ router.post('/', auth, (req, res) => {
       return res.status(400).json({ error: 'Title, category, and expiry date are required' });
     }
 
-    const result = db.prepare(`
-      INSERT INTO items (user_id, title, category, description, reference_number, issuing_authority, issue_date, expiry_date, remind_before_days, cost, notes, notification_enabled)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    `).run(
+    const result = await db.query(`
+      INSERT INTO items (user_id, title, category, description, reference_number, issuing_authority, issue_date, expiry_date, remind_before_days, cost, notes, status, notification_enabled)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active', 1) RETURNING id
+    `, [
       req.user.id, title, category, description || '', reference_number || '',
       issuing_authority || '', issue_date || null, expiry_date,
       remind_before_days || 7, cost || 0, notes || ''
-    );
+    ]);
 
-    const item = db.prepare('SELECT * FROM items WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json({ item });
+    const itemResult = await db.query('SELECT * FROM items WHERE id = $1', [result.rows[0].id]);
+    res.status(201).json({ item: itemResult.rows[0] });
   } catch (err) {
     console.error('Create item error:', err);
     res.status(500).json({ error: 'Server error creating item' });
@@ -207,9 +235,10 @@ router.post('/', auth, (req, res) => {
 });
 
 // GET /api/items/:id - Get single item
-router.get('/:id', auth, (req, res) => {
+router.get('/:id', auth, async (req, res) => {
   try {
-    const item = db.prepare('SELECT * FROM items WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const result = await db.query('SELECT * FROM items WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    const item = result.rows[0];
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
     }
@@ -221,9 +250,10 @@ router.get('/:id', auth, (req, res) => {
 });
 
 // PUT /api/items/:id - Update item
-router.put('/:id', auth, (req, res) => {
+router.put('/:id', auth, async (req, res) => {
   try {
-    const existing = db.prepare('SELECT * FROM items WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const existingResult = await db.query('SELECT * FROM items WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    const existing = existingResult.rows[0];
     if (!existing) {
       return res.status(404).json({ error: 'Item not found' });
     }
@@ -248,14 +278,17 @@ router.put('/:id', auth, (req, res) => {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    const setClauses = Object.keys(updates).map((k, idx) => `${k} = $${idx + 1}`).join(', ');
     const values = Object.values(updates);
     values.push(req.params.id);
 
-    db.prepare(`UPDATE items SET ${setClauses}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
+    await db.query(
+      `UPDATE items SET ${setClauses}, updated_at = CURRENT_TIMESTAMP WHERE id = $${values.length}`,
+      values
+    );
 
-    const item = db.prepare('SELECT * FROM items WHERE id = ?').get(req.params.id);
-    res.json({ item });
+    const itemResult = await db.query('SELECT * FROM items WHERE id = $1', [req.params.id]);
+    res.json({ item: itemResult.rows[0] });
   } catch (err) {
     console.error('Update item error:', err);
     res.status(500).json({ error: 'Server error updating item' });
@@ -263,14 +296,15 @@ router.put('/:id', auth, (req, res) => {
 });
 
 // DELETE /api/items/:id - Delete item
-router.delete('/:id', auth, (req, res) => {
+router.delete('/:id', auth, async (req, res) => {
   try {
-    const existing = db.prepare('SELECT * FROM items WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const existingResult = await db.query('SELECT * FROM items WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    const existing = existingResult.rows[0];
     if (!existing) {
       return res.status(404).json({ error: 'Item not found' });
     }
 
-    db.prepare('DELETE FROM items WHERE id = ?').run(req.params.id);
+    await db.query('DELETE FROM items WHERE id = $1', [req.params.id]);
     res.json({ message: 'Item deleted successfully' });
   } catch (err) {
     console.error('Delete item error:', err);
