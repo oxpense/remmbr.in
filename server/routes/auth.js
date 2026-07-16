@@ -94,8 +94,10 @@ router.post('/send-otp', async (req, res) => {
         emailSent = true;
       } catch (err) {
         console.error('SMTP sending failed:', err);
-        errorMsg = 'Failed to send email. Using demo backup.';
+        errorMsg = err.message || err.toString();
       }
+    } else {
+      errorMsg = 'SMTP environment variables are not set or loaded';
     }
 
     console.log(`[Remmbr OTP log] Code for ${email} is: ${otpCode}`);
@@ -104,7 +106,7 @@ router.post('/send-otp', async (req, res) => {
     if (!emailSent) {
       if (process.env.NODE_ENV === 'production') {
         return res.status(500).json({
-          error: 'Email verification service is currently not configured or failing. Please configure SMTP credentials on Render.'
+          error: `Email verification service is failing: ${errorMsg}.`
         });
       } else {
         return res.json({
