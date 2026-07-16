@@ -127,7 +127,7 @@ router.post('/send-otp', async (req, res) => {
     // Mail dispatch driver selection (Resend HTTPS -> Brevo HTTPS -> SMTP standard)
     if (process.env.RESEND_API_KEY) {
       try {
-        const fromEmail = process.env.RESEND_FROM || 'onboarding@resend.dev';
+        const fromEmail = process.env.RESEND_FROM || 'otp@remmbr.xyz';
         await postRequest(
           'https://api.resend.com/emails',
           { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
