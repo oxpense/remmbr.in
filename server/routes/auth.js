@@ -97,12 +97,24 @@ router.post('/send-otp', async (req, res) => {
 
     console.log(`[Remmbr OTP log] Code for ${email} is: ${otpCode}`);
 
-    // Return response. If SMTP not set, return OTP in response for testing ease.
+    // Return response. Expose OTP code in response ONLY in development mode.
+    if (!emailSent) {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(500).json({
+          error: 'Email verification service is currently not configured or failing. Please configure SMTP credentials on Render.'
+        });
+      } else {
+        return res.json({
+          success: true,
+          message: 'OTP generated (Dev fallback).',
+          demoOtp: otpCode
+        });
+      }
+    }
+
     res.json({
       success: true,
-      message: emailSent ? 'OTP sent to your Gmail account!' : 'OTP generated.',
-      demoOtp: !emailSent ? otpCode : null,
-      error: errorMsg
+      message: 'OTP sent to your Gmail account!'
     });
   } catch (err) {
     console.error('Send OTP error:', err);
