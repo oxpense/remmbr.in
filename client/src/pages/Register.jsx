@@ -8,8 +8,10 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [showOtp, setShowOtp] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const { register, sendOtp } = useAuth();
   const navigate = useNavigate();
 
   const getStrength = () => {
@@ -21,18 +23,59 @@ export default function Register() {
   };
   const strength = getStrength();
 
-  const handleSubmit = async (e) => {
+  const handleRequestOtp = async (e) => {
     e.preventDefault();
-    if (!name || !email || !password) { toast.error('Please fill in all fields'); return; }
-    if (password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
-    if (password !== confirmPassword) { toast.error('Passwords do not match'); return; }
+    if (!name || !email || !password || !confirmPassword) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    const emailClean = email.trim().toLowerCase();
+    if (!emailClean.endsWith('@gmail.com')) {
+      toast.error('Only Gmail accounts (@gmail.com) are allowed');
+      return;
+    }
+
     setLoading(true);
     try {
-      await register(name, email, password);
-      toast.success('Account created!');
+      const res = await sendOtp(emailClean, 'register');
+      toast.success(res.message || 'Verification code sent to your Gmail!');
+      if (res.demoOtp) {
+        toast(`[Demo Mode] OTP code is: ${res.demoOtp}`, { icon: '🔑', duration: 6000 });
+      }
+      setShowOtp(true);
+    } catch (err) {
+      toast.error(err.message || 'Failed to send verification code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyAndRegister = async (e) => {
+    e.preventDefault();
+    if (!otp) {
+      toast.error('Please enter the 6-digit verification code');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await register(name, email.trim().toLowerCase(), password, otp);
+      toast.success('Account created successfully!');
       navigate('/');
-    } catch (err) { toast.error(err.message || 'Registration failed'); }
-    finally { setLoading(false); }
+    } catch (err) {
+      toast.error(err.message || 'Verification failed. Please check the code.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -60,9 +103,9 @@ export default function Register() {
           <p className="text-white/35 text-lg mb-10 leading-relaxed">Create your free account and take control of all your important dates.</p>
           <div className="grid grid-cols-2 gap-3">
             {[
+              { value: '🔒', label: 'Gmail OTP Verification' },
               { value: '100%', label: 'Free forever' },
               { value: '∞', label: 'Unlimited items' },
-              { value: '🔐', label: 'Encrypted data' },
               { value: '📱', label: 'Mobile friendly' },
             ].map((s, i) => (
               <div key={i} className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}>
@@ -87,49 +130,86 @@ export default function Register() {
 
           <div className="card p-7 sm:p-8">
             <h2 className="text-xl font-semibold text-white mb-1">Create Account</h2>
-            <p className="text-white/25 text-sm mb-6">Get started for free</p>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="label">Full Name</label>
-                <div className="relative">
-                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-                  <input type="text" className="input pl-10" placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required />
-                </div>
-              </div>
-              <div>
-                <label className="label">Email</label>
-                <div className="relative">
-                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
-                  <input type="email" className="input pl-10" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
-                </div>
-              </div>
-              <div>
-                <label className="label">Password</label>
-                <div className="relative">
-                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
-                  <input type="password" className="input pl-10" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
-                </div>
-                {password && (
-                  <div className="mt-2">
-                    <div className="flex gap-1">{[1,2,3,4].map(i => (
-                      <div key={i} className="h-1 flex-1 rounded-full transition-all duration-300" style={{ backgroundColor: i <= strength.level ? strength.color : 'rgba(255,255,255,0.06)' }} />
-                    ))}</div>
-                    <p className="text-[11px] mt-1 font-medium" style={{ color: strength.color }}>{strength.label}</p>
+            <p className="text-white/25 text-sm mb-6">
+              {!showOtp ? 'Get started for free' : 'Verify the code sent to your Gmail'}
+            </p>
+
+            {!showOtp ? (
+              <form onSubmit={handleRequestOtp} className="space-y-4">
+                <div>
+                  <label className="label">Full Name</label>
+                  <div className="relative">
+                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                    <input type="text" className="input pl-10" placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required />
                   </div>
-                )}
-              </div>
-              <div>
-                <label className="label">Confirm Password</label>
-                <div className="relative">
-                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
-                  <input type="password" className="input pl-10" placeholder="Repeat your password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
                 </div>
-                {confirmPassword && password !== confirmPassword && <p className="text-[11px] text-rose-300 mt-1">Passwords don't match</p>}
-              </div>
-              <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
-                {loading ? <span className="flex items-center justify-center gap-2"><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Creating account...</span> : 'Create Account'}
-              </button>
-            </form>
+                <div>
+                  <label className="label">Gmail Address</label>
+                  <div className="relative">
+                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
+                    <input type="email" className="input pl-10" placeholder="yourname@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Password</label>
+                  <div className="relative">
+                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                    <input type="password" className="input pl-10" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+                  </div>
+                  {password && (
+                    <div className="mt-2">
+                      <div className="flex gap-1">{[1,2,3,4].map(i => (
+                        <div key={i} className="h-1 flex-1 rounded-full transition-all duration-300" style={{ backgroundColor: i <= strength.level ? strength.color : 'rgba(255,255,255,0.06)' }} />
+                      ))}</div>
+                      <p className="text-[11px] mt-1 font-medium" style={{ color: strength.color }}>{strength.label}</p>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="label">Confirm Password</label>
+                  <div className="relative">
+                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                    <input type="password" className="input pl-10" placeholder="Repeat your password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+                  </div>
+                  {confirmPassword && password !== confirmPassword && <p className="text-[11px] text-rose-300 mt-1">Passwords don't match</p>}
+                </div>
+                <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
+                  {loading ? 'Sending code...' : 'Register Account'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyAndRegister} className="space-y-4 animate-fadeIn">
+                <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl mb-2 text-xs text-indigo-300">
+                  We've sent a 6-digit verification code to <strong>{email}</strong>. Enter it below to register.
+                </div>
+                <div>
+                  <label className="label">6-Digit Verification Code (OTP)</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      className="input text-center text-lg font-bold tracking-[0.4em] placeholder:tracking-normal placeholder:font-normal placeholder:text-sm"
+                      placeholder="XXXXXX"
+                      value={otp}
+                      onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                      required
+                    />
+                  </div>
+                </div>
+                <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
+                  {loading ? 'Verifying...' : 'Verify & Create Account'}
+                </button>
+                <div className="flex items-center justify-between text-xs mt-2 px-1">
+                  <button type="button" onClick={() => setShowOtp(false)} className="text-white/40 hover:text-white/70 transition-colors">
+                    ← Back to Form
+                  </button>
+                  <button type="button" onClick={handleRequestOtp} className="text-indigo-300 hover:text-indigo-250 transition-colors">
+                    Resend Code
+                  </button>
+                </div>
+              </form>
+            )}
+
             <p className="mt-6 text-center text-sm text-white/25">
               Already have an account?{' '}
               <Link to="/login" className="text-indigo-300 hover:text-indigo-200 font-medium transition-colors">Sign in</Link>

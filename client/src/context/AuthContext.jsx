@@ -27,15 +27,19 @@ export function AuthProvider({ children }) {
     loadUser();
   }, [loadUser]);
 
-  const login = async (email, password) => {
-    const response = await authApi.login(email, password);
+  const sendOtp = async (email, action) => {
+    return await authApi.sendOtp(email, action);
+  };
+
+  const login = async (email, password, otp) => {
+    const response = await authApi.loginVerify(email, password, otp);
     localStorage.setItem('token', response.token);
     setUser(response.user);
     return response.user;
   };
 
-  const register = async (name, email, password) => {
-    const response = await authApi.register(name, email, password);
+  const register = async (name, email, password, otp) => {
+    const response = await authApi.registerVerify(name, email, password, otp);
     localStorage.setItem('token', response.token);
     setUser(response.user);
     return response.user;
@@ -51,7 +55,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser, loadUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser, loadUser, sendOtp }}>
       {children}
     </AuthContext.Provider>
   );

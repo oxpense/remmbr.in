@@ -28,15 +28,20 @@ async function request(endpoint, options = {}) {
 
 // Auth
 export const auth = {
-  login: (email, password) =>
-    request('/auth/login', {
+  sendOtp: (email, action) =>
+    request('/auth/send-otp', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, action }),
     }),
-  register: (name, email, password) =>
-    request('/auth/register', {
+  registerVerify: (name, email, password, otp) =>
+    request('/auth/register-verify', {
       method: 'POST',
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, otp }),
+    }),
+  loginVerify: (email, password, otp) =>
+    request('/auth/login-verify', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, otp }),
     }),
   me: () => request('/auth/me'),
   updateSettings: (settings) =>

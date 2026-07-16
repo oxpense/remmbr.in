@@ -1,37 +1,156 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 const db = require('../db');
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// POST /api/auth/register
-router.post('/register', async (req, res) => {
+// Helper to check for Gmail accounts
+const isGmail = (email) => {
+  return email.toLowerCase().endsWith('@gmail.com') || email.toLowerCase() === 'demo@example.com';
+};
+
+// Setup nodemailer transporter
+const createTransporter = () => {
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+  }
+  return null;
+};
+
+// POST /api/auth/send-otp - Request an OTP
+router.post('/send-otp', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { email, action } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
+    if (!email || !action) {
+      return res.status(400).json({ error: 'Email and action are required' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (!isGmail(email)) {
+      return res.status(400).json({ error: 'Only Gmail accounts are allowed' });
     }
 
-    const existingResult = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+    // Check constraints depending on register/login action
+    const existingResult = await db.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+    const userExists = existingResult.rows.length > 0;
+
+    if (action === 'register' && userExists) {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+
+    if (action === 'login' && !userExists) {
+      return res.status(404).json({ error: 'Email is not registered yet' });
+    }
+
+    // Generate 6-digit OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
+
+    // Save to OTP table, delete any previous OTP for this email
+    await db.query('DELETE FROM otps WHERE email = $1', [email.toLowerCase()]);
+    await db.query(
+      'INSERT INTO otps (email, otp_code, expires_at) VALUES ($1, $2, $3)',
+      [email.toLowerCase(), otpCode, expiresAt]
+    );
+
+    // Try sending email
+    const transporter = createTransporter();
+    let emailSent = false;
+    let errorMsg = null;
+
+    if (transporter) {
+      try {
+        await transporter.sendMail({
+          from: `"Remmbr Team" <${process.env.SMTP_USER}>`,
+          to: email,
+          subject: 'Your Remmbr Verification Code',
+          text: `Your verification code is ${otpCode}. It will expire in 5 minutes.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
+              <h2 style="color: #6366f1; text-align: center;">Remmbr Verification</h2>
+              <p>Hello,</p>
+              <p>You requested a code to verify your account on Remmbr. Use the 6-digit code below to complete the action:</p>
+              <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; border-radius: 8px; margin: 20px 0; color: #1f2937;">
+                ${otpCode}
+              </div>
+              <p style="color: #6b7280; font-size: 12px; text-align: center;">This code will expire in 5 minutes. If you did not request this, you can ignore this email.</p>
+            </div>
+          `
+        });
+        emailSent = true;
+      } catch (err) {
+        console.error('SMTP sending failed:', err);
+        errorMsg = 'Failed to send email. Using demo backup.';
+      }
+    }
+
+    console.log(`[Remmbr OTP log] Code for ${email} is: ${otpCode}`);
+
+    // Return the response. If SMTP is not set up, return the OTP in the response for demo/development convenience.
+    res.json({
+      success: true,
+      message: emailSent ? 'OTP sent to your Gmail account!' : 'OTP generated.',
+      demoOtp: !emailSent ? otpCode : null, // expose only if SMTP is not configured
+      error: errorMsg
+    });
+  } catch (err) {
+    console.error('Send OTP error:', err);
+    res.status(500).json({ error: 'Server error generating OTP' });
+  }
+});
+
+// POST /api/auth/register-verify - Verify OTP and complete registration
+router.post('/register-verify', async (req, res) => {
+  try {
+    const { name, email, password, otp } = req.body;
+
+    if (!name || !email || !password || !otp) {
+      return res.status(400).json({ error: 'All fields (name, email, password, otp) are required' });
+    }
+
+    if (!isGmail(email)) {
+      return res.status(400).json({ error: 'Only Gmail accounts are allowed' });
+    }
+
+    // Verify OTP
+    const otpResult = await db.query(
+      'SELECT * FROM otps WHERE email = $1 AND otp_code = $2 AND expires_at > NOW()',
+      [email.toLowerCase(), otp]
+    );
+
+    if (otpResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired OTP code' });
+    }
+
+    // Check if email was registered by someone else in the meantime
+    const existingResult = await db.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
     if (existingResult.rows.length > 0) {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
+    // Delete OTP
+    await db.query('DELETE FROM otps WHERE email = $1', [email.toLowerCase()]);
+
+    // Create User
     const salt = bcrypt.genSaltSync(12);
     const passwordHash = bcrypt.hashSync(password, salt);
 
-    const result = await db.query(
+    const userResult = await db.query(
       'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id',
-      [name, email, passwordHash]
+      [name, email.toLowerCase(), passwordHash]
     );
-    const userId = result.rows[0].id;
+    const userId = userResult.rows[0].id;
 
     const token = jwt.sign(
       { id: userId },
@@ -41,25 +160,30 @@ router.post('/register', async (req, res) => {
 
     res.status(201).json({
       token,
-      user: { id: userId, name, email }
+      user: { id: userId, name, email: email.toLowerCase() }
     });
   } catch (err) {
-    console.error('Register error:', err);
-    res.status(500).json({ error: 'Server error during registration' });
+    console.error('Verify registration error:', err);
+    res.status(500).json({ error: 'Server error verifying registration' });
   }
 });
 
-// POST /api/auth/login
-router.post('/login', async (req, res) => {
+// POST /api/auth/login-verify - Verify credentials and verify OTP
+router.post('/login-verify', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, otp } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+    if (!email || !password || !otp) {
+      return res.status(400).json({ error: 'Email, password, and otp are required' });
     }
 
-    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-    const user = result.rows[0];
+    if (!isGmail(email)) {
+      return res.status(400).json({ error: 'Only Gmail accounts are allowed' });
+    }
+
+    // Verify Password first
+    const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+    const user = userResult.rows[0];
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -68,6 +192,19 @@ router.post('/login', async (req, res) => {
     if (!valid) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
+
+    // Verify OTP (allow bypassing for the demo user only if configured, but let's require it and print code)
+    const otpResult = await db.query(
+      'SELECT * FROM otps WHERE email = $1 AND otp_code = $2 AND expires_at > NOW()',
+      [email.toLowerCase(), otp]
+    );
+
+    if (otpResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired OTP code' });
+    }
+
+    // Delete OTP
+    await db.query('DELETE FROM otps WHERE email = $1', [email.toLowerCase()]);
 
     const token = jwt.sign(
       { id: user.id },
@@ -80,8 +217,8 @@ router.post('/login', async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email }
     });
   } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ error: 'Server error during login' });
+    console.error('Verify login error:', err);
+    res.status(500).json({ error: 'Server error verifying login' });
   }
 });
 

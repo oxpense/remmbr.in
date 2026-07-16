@@ -76,6 +76,16 @@ async function initDatabase() {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS otps (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        otp_code VARCHAR(6) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Seed Categories
     const categoryCountResult = await client.query('SELECT COUNT(*) FROM categories');
     if (parseInt(categoryCountResult.rows[0].count, 10) === 0) {
