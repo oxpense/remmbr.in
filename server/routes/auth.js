@@ -155,7 +155,7 @@ router.post('/register-verify', async (req, res) => {
     const token = jwt.sign(
       { id: userId },
       process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
     );
 
     res.status(201).json({
@@ -196,7 +196,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign(
       { id: user.id },
       process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
     );
 
     res.json({
