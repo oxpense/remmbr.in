@@ -57,7 +57,7 @@ export default function Landing() {
         {/* Hero Section */}
         <section className="text-center max-w-3xl mx-auto mb-16 sm:mb-24">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950/[0.04] border border-emerald-950/[0.06] mb-6">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
             <span className="text-[10px] sm:text-xs font-extrabold text-[#064e3b] tracking-wider uppercase">100% Free Renewal Tracker</span>
           </div>
           
@@ -73,7 +73,7 @@ export default function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
-            <Link to="/register" className="w-full sm:w-auto btn-primary px-8 py-4 text-base font-bold text-white rounded-2xl shadow-md text-center animate-pulse" style={{ background: '#064e3b' }}>
+            <Link to="/register" className="w-full sm:w-auto btn-primary px-8 py-4 text-base font-bold text-white rounded-2xl shadow-md text-center hover:opacity-90 transition-opacity" style={{ background: '#064e3b' }}>
               Create Free Account
             </Link>
             <button 
