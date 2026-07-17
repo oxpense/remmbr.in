@@ -41,7 +41,7 @@ export default function Landing() {
             <Link to="/" className="flex items-center">
               <LogoFull iconSize="w-9 h-9" textSize="text-xl" />
             </Link>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold text-slate-400 tracking-wide"
+            <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold text-slate-400 tracking-wide"
               style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.12)' }}>
               built by Osaid
             </span>
