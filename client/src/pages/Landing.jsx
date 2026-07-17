@@ -37,9 +37,15 @@ export default function Landing() {
       {/* Header */}
       <header className="sticky top-0 z-40 w-full px-4 sm:px-6 py-4 transition-all duration-300">
         <div className="max-w-6xl mx-auto flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-white/45 backdrop-blur-md border border-white/50 shadow-[0_8px_32px_0_rgba(6,78,59,0.02)]">
-          <Link to="/" className="flex items-center">
-            <LogoFull iconSize="w-9 h-9" textSize="text-xl" />
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link to="/" className="flex items-center">
+              <LogoFull iconSize="w-9 h-9" textSize="text-xl" />
+            </Link>
+            <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold text-slate-400 tracking-wide"
+              style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.12)' }}>
+              built by Osaid
+            </span>
+          </div>
           <div className="flex items-center gap-2.5 sm:gap-4">
             <Link to="/login" className="px-3.5 py-2 text-sm font-bold text-slate-600 hover:text-[#064e3b] transition-colors rounded-xl hover:bg-emerald-950/[0.03]">
               Sign In
