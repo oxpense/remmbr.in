@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { items as itemsApi, categories as categoriesApi } from '../api';
 import UpcomingBanner from '../components/UpcomingBanner';
@@ -30,6 +31,83 @@ export default function Dashboard() {
   const [recentItems, setRecentItems] = useState([]);
   const [categoriesWithCounts, setCategoriesWithCounts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // States for clickable metrics modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalItems, setModalItems] = useState([]);
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const handleCardClick = async (key, label) => {
+    setModalOpen(true);
+    setModalTitle(label);
+    setModalLoading(true);
+    try {
+      const res = await itemsApi.getAll({ limit: 1000 });
+      const allItems = res.items || [];
+      
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const nowMs = now.getTime();
+      
+      const thirtyDaysMs = nowMs + 30 * 24 * 60 * 60 * 1000;
+      const sevenDaysMs = nowMs + 7 * 24 * 60 * 60 * 1000;
+      
+      let filtered = [];
+      if (key === 'total') {
+        filtered = allItems;
+      } else if (key === 'active') {
+        filtered = allItems.filter(item => item.status === 'active');
+      } else if (key === 'expired') {
+        filtered = allItems.filter(item => {
+          const expDate = new Date(item.expiry_date).getTime();
+          return item.status === 'expired' || (item.status === 'active' && expDate < nowMs);
+        });
+      } else if (key === 'upcoming') {
+        filtered = allItems.filter(item => {
+          const expDate = new Date(item.expiry_date).getTime();
+          return item.status === 'active' && expDate >= nowMs && expDate <= thirtyDaysMs;
+        });
+      } else if (key === 'critical') {
+        filtered = allItems.filter(item => {
+          const expDate = new Date(item.expiry_date).getTime();
+          return item.status === 'active' && expDate >= nowMs && expDate <= sevenDaysMs;
+        });
+      } else if (key === 'yearlyCost') {
+        filtered = allItems.filter(item => item.status === 'active' && item.cost > 0);
+      }
+      
+      setModalItems(filtered);
+    } catch (err) {
+      toast.error('Failed to load items details');
+      setModalOpen(false);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleItemDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this item?')) return;
+    try {
+      await itemsApi.delete(id);
+      toast.success('Item deleted successfully!');
+      
+      // Update local modal list
+      setModalItems(prev => prev.filter(item => item.id !== id));
+      
+      // Sync dashboard data in background
+      const [statsRes, upcomingRes, itemsRes, categoriesRes] = await Promise.all([
+        itemsApi.getStats(), itemsApi.getUpcoming(30),
+        itemsApi.getAll({ sort: 'created', limit: 6 }), categoriesApi.getWithCounts()
+      ]);
+      setStats(statsRes.stats);
+      setUpcoming(upcomingRes.items || []);
+      setRecentItems((itemsRes.items || []).slice(0, 6));
+      setCategoriesWithCounts(categoriesRes.categories || []);
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete item');
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -91,7 +169,12 @@ export default function Dashboard() {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {statConfigs.map((cfg, i) => (
-            <div key={cfg.key} className="stat-card animate-fadeIn" style={{ animationDelay: `${0.08 + i * 0.04}s`, opacity: 0 }}>
+            <div 
+              key={cfg.key} 
+              onClick={() => handleCardClick(cfg.key, cfg.label)}
+              className="stat-card cursor-pointer card-hover animate-fadeIn" 
+              style={{ animationDelay: `${0.08 + i * 0.04}s`, opacity: 0 }}
+            >
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm"
                   style={{ background: `${cfg.color}15`, border: `1px solid ${cfg.color}20` }}>
@@ -224,6 +307,60 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Metrics Detail Modal */}
+      {modalOpen && createPortal(
+        <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-fadeIn">
+          {/* Modal Container */}
+          <div className="card w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col relative p-6 sm:p-8 shadow-[0_32px_80px_-15px_rgba(6,78,59,0.15)] bg-white/95 border border-white/60">
+            {/* Close Button */}
+            <button 
+              onClick={() => setModalOpen(false)}
+              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-950/[0.03] hover:bg-slate-950/[0.08] text-slate-500 hover:text-slate-800 transition-all duration-200 active:scale-90"
+              aria-label="Close modal"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Header */}
+            <div className="pb-4 border-b border-slate-900/[0.05] mr-8">
+              <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-3">
+                <span className="w-1.5 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, #10b981, #059669)' }} />
+                {modalTitle}
+                {!modalLoading && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-950/[0.04] text-slate-500">
+                    {modalItems.length} {modalItems.length === 1 ? 'item' : 'items'}
+                  </span>
+                )}
+              </h2>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto mt-6 pr-1.5">
+              {modalLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <div className="w-10 h-10 rounded-full border-2 border-emerald-400/20 border-t-emerald-600 animate-spin" />
+                  <p className="text-emerald-800/60 font-semibold text-sm tracking-wide">Loading items...</p>
+                </div>
+              ) : modalItems.length === 0 ? (
+                <div className="text-center py-16 flex flex-col items-center justify-center gap-2">
+                  <span className="text-4xl animate-bounce">🍃</span>
+                  <p className="text-slate-400 font-bold text-sm">No items found matching this metric.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+                  {modalItems.map(item => (
+                    <ItemCard key={item.id} item={item} onDelete={handleItemDelete} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
