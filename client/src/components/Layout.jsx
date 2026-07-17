@@ -5,7 +5,7 @@ import { LogoFull } from './Logo';
 
 const navItems = [
   {
-    path: '/',
+    path: '/dashboard',
     label: 'Dashboard',
     icon: (
       <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,7 +55,7 @@ export default function Layout({ children }) {
   };
 
   const isActive = (path) => {
-    if (path === '/') return location.pathname === '/';
+    if (path === '/dashboard') return location.pathname === '/dashboard';
     return location.pathname.startsWith(path);
   };
 
@@ -96,7 +96,7 @@ export default function Layout({ children }) {
                 : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
             </svg>
           </button>
-          <Link to="/" className="flex items-center">
+          <Link to="/dashboard" className="flex items-center">
             <LogoFull iconSize="w-7 h-7" textSize="text-lg" />
           </Link>
           <div className="w-9" />
@@ -121,7 +121,7 @@ export default function Layout({ children }) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-5 flex justify-center" style={{ borderBottom: '1px solid rgba(16, 185, 129, 0.05)' }}>
-            <Link to="/" onClick={() => setSidebarOpen(false)}>
+            <Link to="/dashboard" onClick={() => setSidebarOpen(false)}>
               <LogoFull iconSize="w-9 h-9" textSize="text-xl" />
             </Link>
           </div>

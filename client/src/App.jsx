@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Items from './pages/Items';
 import AddItem from './pages/AddItem';
 import Settings from './pages/Settings';
+import Landing from './pages/Landing';
 
 function AppLayout({ children }) {
   return <Layout>{children}</Layout>;
@@ -29,9 +30,10 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
-      <Route path="/" element={<ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
+      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
+      <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Landing />} />
+      <Route path="/dashboard" element={<ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
       <Route path="/items" element={<ProtectedRoute><AppLayout><Items /></AppLayout></ProtectedRoute>} />
       <Route path="/items/add" element={<ProtectedRoute><AppLayout><AddItem /></AppLayout></ProtectedRoute>} />
       <Route path="/items/:id/edit" element={<ProtectedRoute><AppLayout><AddItem /></AppLayout></ProtectedRoute>} />
