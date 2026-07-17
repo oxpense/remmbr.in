@@ -78,27 +78,10 @@ export default function Landing() {
             Keep track of all your renewals — passports, driver licenses, vehicle insurances, subscriptions, and memberships. Get clean, automated reminders before they expire.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
+          <div className="flex justify-center max-w-md mx-auto">
             <Link to="/register" className="w-full sm:w-auto btn-primary px-8 py-4 text-base font-bold text-white rounded-2xl shadow-md text-center hover:opacity-90 transition-opacity" style={{ background: '#064e3b' }}>
               Create Free Account
             </Link>
-            <button 
-              onClick={handleDemoClick}
-              disabled={demoLoading}
-              className="w-full sm:w-auto px-8 py-4 text-base font-bold text-emerald-800 rounded-2xl bg-white/70 hover:bg-white/95 border border-white shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
-            >
-              {demoLoading ? (
-                <div className="w-5 h-5 rounded-full border-2 border-emerald-600/20 border-t-emerald-600 animate-spin" />
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Try Live Demo
-                </>
-              )}
-            </button>
           </div>
         </section>
 
