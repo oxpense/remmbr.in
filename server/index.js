@@ -11,6 +11,10 @@ const { initDatabase } = require('./db');
 const authRoutes = require('./routes/auth');
 const itemRoutes = require('./routes/items');
 const categoryRoutes = require('./routes/categories');
+const notificationRoutes = require('./routes/notifications');
+
+// Import cron service
+const { startReminderCron } = require('./services/reminderCron');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,6 +36,7 @@ app.use('/api/', limiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -64,6 +69,9 @@ initDatabase()
       console.log(`  📦 API: http://localhost:${PORT}/api/`);
       console.log(`  🔑 Demo login: demo@example.com / demo123456\n`);
     });
+
+    // Start WhatsApp reminder cron job
+    startReminderCron();
   })
   .catch(err => {
     console.error('Database initialization failed! Server shutting down.', err);

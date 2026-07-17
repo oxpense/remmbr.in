@@ -88,5 +88,11 @@ export const categories = {
   getWithCounts: () => request('/categories/with-counts'),
 };
 
+// Notifications
+export const notifications = {
+  sendTest: () => request('/notifications/test', { method: 'POST' }),
+  getLogs: () => request('/notifications/logs'),
+};
+
 // Health
 export const health = () => request('/health');
