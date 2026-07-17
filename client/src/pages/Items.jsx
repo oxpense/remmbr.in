@@ -49,8 +49,8 @@ export default function Items() {
     <div className="space-y-6 animate-fadeIn">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">My Items</h1>
-          <p className="text-white/25 mt-1 text-sm">Manage all your renewal items</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800">My Items</h1>
+          <p className="text-slate-500 mt-1 text-sm font-semibold">Manage all your renewal items</p>
         </div>
         <Link to="/items/add" className="btn-primary flex items-center gap-2 text-sm">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -63,7 +63,7 @@ export default function Items() {
         <div className="flex flex-col sm:flex-row gap-3">
           <form onSubmit={e => { e.preventDefault(); updateFilter('search', search); }} className="flex-1">
             <div className="relative">
-              <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
               <input type="text" placeholder="Search items..." className="input pl-10" value={search} onChange={e => setSearch(e.target.value)} />
@@ -91,13 +91,13 @@ export default function Items() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-white/5 border-t-indigo-400 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-emerald-600 rounded-full animate-spin" />
         </div>
       ) : items.length === 0 ? (
         <div className="card p-12 text-center">
           <div className="text-5xl mb-4">📋</div>
-          <h3 className="text-lg font-semibold text-white mb-2">No items found</h3>
-          <p className="text-white/25 mb-6 max-w-sm mx-auto text-sm">
+          <h3 className="text-lg font-bold text-slate-800 mb-2">No items found</h3>
+          <p className="text-slate-500 mb-6 max-w-sm mx-auto text-sm font-medium">
             {search || category !== 'all' || status !== 'all' ? 'Try adjusting your filters' : 'Start tracking your first renewal item'}
           </p>
           {!search && category === 'all' && status === 'all'
@@ -106,7 +106,7 @@ export default function Items() {
         </div>
       ) : (
         <>
-          <p className="text-sm text-white/20">{items.length} item{items.length !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-slate-500 font-semibold">{items.length} item{items.length !== 1 ? 's' : ''}</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {items.map((item, i) => (
               <div key={item.id} className="animate-fadeIn" style={{ animationDelay: `${i * 0.03}s`, opacity: 0 }}>

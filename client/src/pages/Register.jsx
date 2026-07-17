@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { LogoFull } from '../components/Logo';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -79,142 +80,116 @@ export default function Register() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden flex" style={{ background: 'linear-gradient(145deg, #0f1729, #162033, #0f1729)' }}>
+    <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+      {/* Background */}
       <div className="fixed inset-0 z-0">
-        <div className="absolute -top-28 -right-28 w-[480px] h-[480px] rounded-full opacity-[0.12] animate-float"
-          style={{ background: 'radial-gradient(circle, #818cf8 0%, transparent 65%)', filter: 'blur(80px)' }} />
-        <div className="absolute -bottom-28 -left-28 w-[400px] h-[400px] rounded-full opacity-[0.08] animate-float-slow"
-          style={{ background: 'radial-gradient(circle, #67e8f9 0%, transparent 65%)', filter: 'blur(80px)' }} />
-        <div className="absolute inset-0 opacity-[0.02]"
-          style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+        <div className="absolute -top-28 -right-28 w-[480px] h-[480px] rounded-full opacity-[0.06] animate-float"
+          style={{ background: 'radial-gradient(circle, #10b981 0%, transparent 65%)', filter: 'blur(80px)' }} />
+        <div className="absolute -bottom-28 -left-28 w-[400px] h-[400px] rounded-full opacity-[0.05] animate-float-slow"
+          style={{ background: 'radial-gradient(circle, #34d399 0%, transparent 65%)', filter: 'blur(80px)' }} />
+        <div className="absolute inset-0 opacity-[0.05]"
+          style={{ backgroundImage: 'radial-gradient(circle, rgba(16,185,129,0.08) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
       </div>
 
-      {/* Left branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative z-10 items-center justify-center p-12">
-        <div className="max-w-md animate-fadeIn">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-8"
-            style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(103,232,249,0.15))', border: '1px solid rgba(129,140,248,0.2)', backdropFilter: 'blur(16px)', boxShadow: '0 8px 32px rgba(129,140,248,0.15)' }}>
-            💎
+      {/* Main card */}
+      <div className="w-full max-w-[450px] animate-fadeIn relative z-10">
+        <div className="card p-8 sm:p-10">
+          {/* Logo block */}
+          <div className="text-center mb-8">
+            <LogoFull iconSize="w-12 h-12" textSize="text-3xl" />
+            <p className="text-[#064e3b]/50 text-[10px] font-bold tracking-[0.2em] uppercase mt-2">Never forget what matters</p>
           </div>
-          <h1 className="text-4xl font-extrabold text-white mb-3 leading-tight">
-            Start tracking<br />
-            <span className="bg-gradient-to-r from-indigo-300 via-purple-300 to-cyan-300 bg-clip-text text-transparent">your renewals</span>
-          </h1>
-          <p className="text-white/35 text-lg mb-10 leading-relaxed">Create your free account and take control of all your important dates.</p>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { value: '🔒', label: 'Gmail OTP Verification' },
-              { value: '100%', label: 'Free forever' },
-              { value: '∞', label: 'Unlimited items' },
-              { value: '📱', label: 'Mobile friendly' },
-            ].map((s, i) => (
-              <div key={i} className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}>
-                <div className="text-xl font-bold text-white mb-1">{s.value}</div>
-                <div className="text-[11px] text-white/25 font-medium">{s.label}</div>
+
+          {/* Switcher tabs */}
+          <div className="flex p-1 bg-emerald-950/[0.04] border border-emerald-950/[0.06] rounded-xl mb-6">
+            <Link to="/login" className="flex-1 py-2 text-center text-sm font-bold rounded-lg text-slate-500 hover:text-slate-800 transition-colors select-none">
+              Sign In
+            </Link>
+            <span className="flex-1 py-2 text-center text-sm font-bold rounded-lg bg-white shadow-sm text-[#064e3b] cursor-default select-none">
+              Create Account
+            </span>
+          </div>
+
+          <h2 className="text-xl font-bold text-slate-800 mb-1">Create Account</h2>
+          <p className="text-slate-500 text-sm mb-6">
+            {!showOtp ? 'Get started for free' : 'Verify the code sent to your Gmail'}
+          </p>
+
+          {!showOtp ? (
+            <form onSubmit={handleRequestOtp} className="space-y-4">
+              <div>
+                <label className="label">Full Name</label>
+                <div className="relative">
+                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400/50 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                  <input type="text" className="input pl-10" placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required />
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Right form */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 relative z-10">
-        <div className="w-full max-w-md animate-fadeIn">
-          <div className="lg:hidden text-center mb-6">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 text-2xl"
-              style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(103,232,249,0.15))', border: '1px solid rgba(129,140,248,0.2)', backdropFilter: 'blur(16px)', boxShadow: '0 8px 24px rgba(129,140,248,0.15)' }}>
-              💎
-            </div>
-            <h1 className="text-xl font-bold text-white">Remmbr</h1>
-          </div>
-
-          <div className="card p-7 sm:p-8">
-            <h2 className="text-xl font-semibold text-white mb-1">Create Account</h2>
-            <p className="text-white/25 text-sm mb-6">
-              {!showOtp ? 'Get started for free' : 'Verify the code sent to your Gmail'}
-            </p>
-
-            {!showOtp ? (
-              <form onSubmit={handleRequestOtp} className="space-y-4">
-                <div>
-                  <label className="label">Full Name</label>
-                  <div className="relative">
-                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-                    <input type="text" className="input pl-10" placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required />
-                  </div>
+              <div>
+                <label className="label">Gmail Address</label>
+                <div className="relative">
+                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400/50 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
+                  <input type="email" className="input pl-10" placeholder="yourname@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
                 </div>
-                <div>
-                  <label className="label">Gmail Address</label>
-                  <div className="relative">
-                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
-                    <input type="email" className="input pl-10" placeholder="yourname@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
-                  </div>
+              </div>
+              <div>
+                <label className="label">Password</label>
+                <div className="relative">
+                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400/50 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                  <input type="password" className="input pl-10" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
                 </div>
-                <div>
-                  <label className="label">Password</label>
-                  <div className="relative">
-                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
-                    <input type="password" className="input pl-10" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+                {password && (
+                  <div className="mt-2">
+                    <div className="flex gap-1">{[1,2,3,4].map(i => (
+                      <div key={i} className="h-1 flex-1 rounded-full transition-all duration-300" style={{ backgroundColor: i <= strength.level ? strength.color : 'rgba(15,23,42,0.06)' }} />
+                    ))}</div>
+                    <p className="text-[11px] mt-1 font-medium" style={{ color: strength.color }}>{strength.label}</p>
                   </div>
-                  {password && (
-                    <div className="mt-2">
-                      <div className="flex gap-1">{[1,2,3,4].map(i => (
-                        <div key={i} className="h-1 flex-1 rounded-full transition-all duration-300" style={{ backgroundColor: i <= strength.level ? strength.color : 'rgba(255,255,255,0.06)' }} />
-                      ))}</div>
-                      <p className="text-[11px] mt-1 font-medium" style={{ color: strength.color }}>{strength.label}</p>
-                    </div>
-                  )}
+                )}
+              </div>
+              <div>
+                <label className="label">Confirm Password</label>
+                <div className="relative">
+                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400/50 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                  <input type="password" className="input pl-10" placeholder="Repeat your password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
                 </div>
-                <div>
-                  <label className="label">Confirm Password</label>
-                  <div className="relative">
-                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/15 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
-                    <input type="password" className="input pl-10" placeholder="Repeat your password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
-                  </div>
-                  {confirmPassword && password !== confirmPassword && <p className="text-[11px] text-rose-300 mt-1">Passwords don't match</p>}
+                {confirmPassword && password !== confirmPassword && <p className="text-[11px] text-rose-600 mt-1">Passwords don't match</p>}
+              </div>
+              <button type="submit" className="btn-primary w-full py-3.5 font-bold mt-2" style={{ background: '#064e3b' }} disabled={loading}>
+                {loading ? 'Sending code...' : 'Register Account'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyAndRegister} className="space-y-4 animate-fadeIn">
+              <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl mb-2 text-xs text-emerald-800 font-medium">
+                We've sent a 6-digit verification code to <strong>{email}</strong>. Enter it below to register.
+              </div>
+              <div>
+                <label className="label">6-Digit Verification Code (OTP)</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    className="input text-center text-lg font-bold tracking-[0.4em] placeholder:tracking-normal placeholder:font-normal placeholder:text-sm"
+                    placeholder="XXXXXX"
+                    value={otp}
+                    onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                    required
+                  />
                 </div>
-                <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
-                  {loading ? 'Sending code...' : 'Register Account'}
+              </div>
+              <button type="submit" className="btn-primary w-full py-3.5 font-bold" style={{ background: '#064e3b' }} disabled={loading}>
+                {loading ? 'Verifying...' : 'Verify & Create Account'}
+              </button>
+              <div className="flex items-center justify-between text-xs mt-2 px-1">
+                <button type="button" onClick={() => setShowOtp(false)} className="text-slate-500 hover:text-slate-700 transition-colors font-bold">
+                  ← Back to Form
                 </button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyAndRegister} className="space-y-4 animate-fadeIn">
-                <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl mb-2 text-xs text-indigo-300">
-                  We've sent a 6-digit verification code to <strong>{email}</strong>. Enter it below to register.
-                </div>
-                <div>
-                  <label className="label">6-Digit Verification Code (OTP)</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      maxLength={6}
-                      className="input text-center text-lg font-bold tracking-[0.4em] placeholder:tracking-normal placeholder:font-normal placeholder:text-sm"
-                      placeholder="XXXXXX"
-                      value={otp}
-                      onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
-                      required
-                    />
-                  </div>
-                </div>
-                <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
-                  {loading ? 'Verifying...' : 'Verify & Create Account'}
+                <button type="button" onClick={handleRequestOtp} className="text-emerald-700 hover:text-emerald-600 transition-colors font-bold">
+                  Resend Code
                 </button>
-                <div className="flex items-center justify-between text-xs mt-2 px-1">
-                  <button type="button" onClick={() => setShowOtp(false)} className="text-white/40 hover:text-white/70 transition-colors">
-                    ← Back to Form
-                  </button>
-                  <button type="button" onClick={handleRequestOtp} className="text-indigo-300 hover:text-indigo-250 transition-colors">
-                    Resend Code
-                  </button>
-                </div>
-              </form>
-            )}
-
-            <p className="mt-6 text-center text-sm text-white/25">
-              Already have an account?{' '}
-              <Link to="/login" className="text-indigo-300 hover:text-indigo-200 font-medium transition-colors">Sign in</Link>
-            </p>
-          </div>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>

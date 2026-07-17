@@ -102,7 +102,7 @@ export default function AddItem() {
   if (fetching) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-white/5 border-t-indigo-400 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-slate-200 border-t-emerald-600 rounded-full animate-spin" />
       </div>
     );
   }
@@ -114,17 +114,17 @@ export default function AddItem() {
         <Link
           to="/items"
           className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 active:scale-95"
-          style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}
+          style={{ background: 'rgba(16, 185, 129, 0.04)', border: '1px solid rgba(16, 185, 129, 0.1)' }}
         >
-          <svg className="w-5 h-5 text-white/50 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-slate-500 hover:text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
           </svg>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-extrabold text-slate-800">
             {isEdit ? 'Edit Item' : 'Add New Item'}
           </h1>
-          <p className="text-white/25 mt-0.5 text-sm">
+          <p className="text-slate-500 mt-0.5 text-sm font-semibold">
             {isEdit ? 'Update your renewal item details' : 'Track a new renewal item'}
           </p>
         </div>
@@ -135,8 +135,8 @@ export default function AddItem() {
         {/* Section: Basic Info */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <span className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-400 to-cyan-300" />
-            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Basic Information</h3>
+            <span className="w-1 h-4 rounded-full bg-gradient-to-b from-emerald-500 to-teal-400" />
+            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Basic Information</h3>
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
@@ -161,8 +161,8 @@ export default function AddItem() {
         {/* Section: Reference */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <span className="w-1 h-4 rounded-full bg-gradient-to-b from-cyan-300 to-emerald-400" />
-            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Reference Details</h3>
+            <span className="w-1 h-4 rounded-full bg-gradient-to-b from-teal-400 to-emerald-500" />
+            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Reference Details</h3>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
@@ -197,8 +197,8 @@ export default function AddItem() {
         {/* Section: Dates */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <span className="w-1 h-4 rounded-full bg-gradient-to-b from-amber-300 to-rose-400" />
-            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Dates & Reminders</h3>
+            <span className="w-1 h-4 rounded-full bg-gradient-to-b from-amber-400 to-rose-400" />
+            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Dates & Reminders</h3>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
@@ -248,15 +248,15 @@ export default function AddItem() {
               {['active', 'expired', 'archived'].map(s => (
                 <label
                   key={s}
-                  className={`cursor-pointer px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all duration-200 active:scale-[0.97] ${
+                  className={`cursor-pointer px-4 py-2 rounded-xl text-sm font-bold capitalize transition-all duration-200 active:scale-[0.97] ${
                     form.status === s
                       ? 'text-white border-transparent'
-                      : 'bg-white/[0.04] border border-white/[0.08] text-white/40 hover:bg-white/[0.08] hover:text-white/60'
+                      : 'bg-emerald-950/[0.02] border border-emerald-900/10 text-slate-600 hover:bg-emerald-950/[0.05] hover:text-slate-800'
                   }`}
                   style={form.status === s ? {
-                    background: 'linear-gradient(135deg, rgba(129,140,248,0.85), rgba(167,139,250,0.75))',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    boxShadow: '0 4px 16px rgba(129, 140, 248, 0.25)',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    border: '1px solid rgba(16, 185, 129, 0.15)',
+                    boxShadow: '0 4px 16px rgba(16, 185, 129, 0.2)',
                   } : {}}
                 >
                   <input
@@ -282,7 +282,7 @@ export default function AddItem() {
         </div>
 
         {/* Submit */}
-        <div className="flex items-center justify-end gap-3 pt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center justify-end gap-3 pt-6" style={{ borderTop: '1px solid rgba(16,185,129,0.1)' }}>
           <Link to="/items" className="btn-secondary">Cancel</Link>
           <button type="submit" className="btn-primary btn-lg" disabled={loading}>
             {loading ? 'Saving...' : isEdit ? 'Update Item' : 'Add Item'}

@@ -11,24 +11,24 @@ export default function UpcomingBanner({ items = [] }) {
   return (
     <div className="space-y-3">
       {critical.length > 0 && (
-        <div className="card p-4 relative overflow-hidden" style={{ borderLeft: '3px solid rgba(253,164,175,0.5)' }}>
+        <div className="card p-4 relative overflow-hidden" style={{ borderLeft: '3px solid rgba(239,68,68,0.25)' }}>
           <div className="absolute inset-0 opacity-[0.02]"
-            style={{ background: 'radial-gradient(ellipse at left, #fda4af, transparent 70%)' }} />
+            style={{ background: 'radial-gradient(ellipse at left, #ef4444, transparent 70%)' }} />
           <div className="relative">
             <div className="flex items-center gap-2 mb-2.5">
-              <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'rgba(253,164,175,0.15)' }}>
-                <div className="w-1.5 h-1.5 rounded-full bg-rose-300 animate-pulse" />
+              <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'rgba(239,68,68,0.12)' }}>
+                <div className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
               </div>
-              <h3 className="font-semibold text-rose-300 text-sm">
+              <h3 className="font-semibold text-rose-600 text-sm">
                 {critical.length === 1 ? '1 item expiring very soon!' : `${critical.length} items expiring very soon!`}
               </h3>
             </div>
             <div className="space-y-0.5">
               {critical.slice(0, 5).map(item => (
                 <Link key={item.id} to={`/items/${item.id}/edit`}
-                  className="flex items-center justify-between text-sm rounded-lg px-3 py-2 transition-all duration-200 hover:bg-rose-400/[0.04]">
-                  <span className="font-medium text-white/50">{item.title}</span>
-                  <span className="text-rose-300 font-semibold text-xs">
+                  className="flex items-center justify-between text-sm rounded-lg px-3 py-2 transition-all duration-200 hover:bg-rose-900/[0.03]">
+                  <span className="font-medium text-slate-600">{item.title}</span>
+                  <span className="text-rose-600 font-semibold text-xs">
                     {item.days_remaining === 0 ? 'Today!' : `${item.days_remaining}d left`}
                   </span>
                 </Link>
@@ -39,21 +39,21 @@ export default function UpcomingBanner({ items = [] }) {
       )}
 
       {upcoming.length > 0 && (
-        <div className="card p-4" style={{ borderLeft: '3px solid rgba(252,211,77,0.4)' }}>
+        <div className="card p-4" style={{ borderLeft: '3px solid rgba(245,158,11,0.25)' }}>
           <div className="flex items-center gap-2 mb-2.5">
-            <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'rgba(252,211,77,0.12)' }}>
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#fcd34d' }} />
+            <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.12)' }}>
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#d97706' }} />
             </div>
-            <h3 className="font-semibold text-sm" style={{ color: '#fcd34d' }}>
+            <h3 className="font-semibold text-sm" style={{ color: '#d97706' }}>
               {upcoming.length === 1 ? '1 item expiring soon' : `${upcoming.length} items expiring this month`}
             </h3>
           </div>
           <div className="space-y-0.5">
             {upcoming.slice(0, 5).map(item => (
               <Link key={item.id} to={`/items/${item.id}/edit`}
-                className="flex items-center justify-between text-sm rounded-lg px-3 py-2 transition-all duration-200 hover:bg-amber-400/[0.04]">
-                <span className="font-medium text-white/50">{item.title}</span>
-                <span className="font-semibold text-xs" style={{ color: '#fcd34d' }}>{item.days_remaining}d left</span>
+                className="flex items-center justify-between text-sm rounded-lg px-3 py-2 transition-all duration-200 hover:bg-amber-900/[0.03]">
+                <span className="font-medium text-slate-600">{item.title}</span>
+                <span className="font-semibold text-xs" style={{ color: '#d97706' }}>{item.days_remaining}d left</span>
               </Link>
             ))}
           </div>

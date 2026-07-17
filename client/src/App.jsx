@@ -18,10 +18,10 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(145deg, #0f1729, #162033)' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(145deg, #f4faf6, #e8f7f0)' }}>
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-2 border-indigo-400/20 border-t-indigo-400 border-l-cyan-300 animate-spin" />
-          <p className="text-white/25 text-sm tracking-wider">Loading...</p>
+          <div className="w-12 h-12 rounded-full border-2 border-emerald-400/20 border-t-emerald-600 border-l-emerald-400 animate-spin" />
+          <p className="text-emerald-800/60 font-semibold text-sm tracking-wider">Loading...</p>
         </div>
       </div>
     );
