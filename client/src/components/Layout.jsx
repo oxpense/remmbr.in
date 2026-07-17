@@ -177,6 +177,13 @@ export default function Layout({ children }) {
               </svg>
               Sign Out
             </button>
+            {/* Built by badge */}
+            <div className="mt-3 flex justify-center">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-bold text-slate-400 tracking-wide"
+                style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.1)' }}>
+                built by <span className="text-emerald-600 ml-1">Osaid</span>
+              </span>
+            </div>
           </div>
         </div>
       </aside>
