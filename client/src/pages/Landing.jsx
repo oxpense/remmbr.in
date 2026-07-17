@@ -151,6 +151,29 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* WhatsApp Coming Soon Banner */}
+        <section className="mb-20 sm:mb-28 max-w-3xl mx-auto">
+          <div className="relative overflow-hidden rounded-3xl px-8 py-8 sm:py-10 text-center"
+            style={{ background: 'linear-gradient(135deg, #dcfce7 0%, #f0fdf4 50%, #ecfdf5 100%)', border: '1.5px solid rgba(16,185,129,0.2)' }}>
+            {/* Decorative glow */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-20 pointer-events-none"
+              style={{ background: 'radial-gradient(circle, #25D366, transparent)', filter: 'blur(40px)' }} />
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full opacity-20 pointer-events-none"
+              style={{ background: 'radial-gradient(circle, #10b981, transparent)', filter: 'blur(40px)' }} />
+            <div className="relative">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <span className="text-3xl">💬</span>
+                <span className="text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-200 text-emerald-800">Coming Soon</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-800 mb-2">WhatsApp Notifications</h3>
+              <p className="text-sm text-slate-600 font-medium max-w-md mx-auto leading-relaxed">
+                Get instant WhatsApp reminders straight to your phone — before any renewal expires.
+                Zero effort. Pure peace of mind. <span className="font-bold text-emerald-700">Coming very soon!</span>
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Benefits Section (Why Remmbr) */}
         <section className="mb-20 sm:mb-28">
           <div className="text-center max-w-xl mx-auto mb-12 sm:mb-16">
@@ -220,6 +243,9 @@ export default function Landing() {
           <div className="flex items-center gap-2">
             <LogoFull iconSize="w-5 h-5" textSize="text-xs" />
             <span>© {new Date().getFullYear()} Remmbr. All rights reserved.</span>
+          </div>
+          <div className="text-xs font-bold text-slate-400 italic">
+            Designed &amp; created by <span className="text-emerald-700 not-italic font-black">Osaid</span>
           </div>
           <div className="flex gap-4">
             <span className="hover:text-slate-600 cursor-pointer">Privacy Policy</span>
